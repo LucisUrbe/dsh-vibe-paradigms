@@ -1,0 +1,81 @@
+{
+  "milestone": 0,
+  "status": "reconnaissance-complete",
+  "observedAt": "2026-10-09T00:46:49+08:00",
+  "dshVersion": "0.2.0-rc.2",
+  "application": "DeepSeek Harness Desktop",
+  "profile": "desktop",
+  "upstreamReference": {
+    "tag": "dsh-v0.2.0-rc.2",
+    "commit": "639ed015397290b3745d163aafe02ffee4aa3f84"
+  },
+  "features": {
+    "toolsRestrict": true,
+    "toolsGuard": true,
+    "agentPresets": true,
+    "permissionPresets": true,
+    "planMode": true,
+    "web": true,
+    "workspaceRegistry": true,
+    "webhookPackagePresent": true,
+    "webhookEnabledInProfile": false,
+    "schedulePackagePresent": true,
+    "scheduleEnabledInDesktopUI": false,
+    "lspPackagePresent": false
+  },
+  "verificationScope": {
+    "features": "installed public exports, exact-version public types and pinned generated references; tools/web additionally tested in isolated Cordis",
+    "dump": "copied Desktop profile with temporary DSH_HOME; expression values and Electron host wiring not evaluated",
+    "providers": "real API probes plus isolated installed Desktop public services; not deployed to the real Desktop profile"
+  },
+  "presets": [
+    "standard",
+    "ptc",
+    "minimal",
+    "cordis"
+  ],
+  "tools": {
+    "officialWebTools": [
+      "web_search",
+      "web_fetch"
+    ],
+    "upstreamCatalogCount": 70,
+    "standardCompositionUnmodified": true
+  },
+  "services": {
+    "documentedCount": 91
+  },
+  "modelProviderDecision": {
+    "only": "OpenCode Go",
+    "package": "dsh-opencode-go",
+    "version": "0.1.21",
+    "providerId": "dsh-opencode-go",
+    "referenceCommit": "6a834cfda0f4db4e08243b40883eec71abddf655",
+    "isolatedMount": true,
+    "gatewayModelListingHttp": 200,
+    "discoveredUsableModelCount": 32,
+    "streamedToolCallValidated": true,
+    "desktopInstalled": false
+  },
+  "search": {
+    "configuredProvider": "perplexity-search",
+    "officialDeepseekProviderDisabled": true,
+    "officialWebToolReplaced": false,
+    "perplexityApiHttp": 200,
+    "restorationPatchApplied": false,
+    "automaticFallbackExists": false
+  },
+  "schemaDump": {
+    "exitCode": 1,
+    "jsonParseable": true,
+    "presetCarrierErrors": [
+      179,
+      180,
+      181,
+      182
+    ],
+    "externalProviderResolutionError": true,
+    "notAuthoritativeRuntimeFailure": true
+  },
+  "realDesktopModified": false
+}

@@ -1,0 +1,21 @@
+# Public sanitized M0 snapshot: personal UI/onboarding overrides omitted.
+# Your patch layer for this dsh profile, applied after every bundle layer:
+# a top-level YAML array of loader patch entries (id-targeted config
+# overrides, disables, and insert lists; `!!js` expressions allowed).
+- id: agent-default-model
+  name: "@deepseek-ai/dsh-agent-default-model"
+  config:
+    provider: deepseek-account
+    model: deepseek-flash
+    reasoningEffort: max
+- id: web
+  config:
+    searchProvider: perplexity-search
+# The shipped DeepSeek (Messages API) search row is not used.
+- id: web-search-deepseek
+  disabled: true
+# Local plugin: POST https://api.perplexity.ai/search — structured results[].
+# New rows in a patch file must be an insert op; a bare id/name row is dropped.
+- insert:
+    - id: web-search-perplexity-search
+      name: "@local/dsh-web-search-perplexity-search"

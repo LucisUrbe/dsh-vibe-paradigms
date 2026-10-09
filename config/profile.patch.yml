@@ -1,0 +1,7 @@
+# Credential values belong to the native DSH credential store or environment.
+- id: agent-default-model
+  name: '@deepseek-ai/dsh-agent-default-model'
+  config:
+    provider: dsh-opencode-go
+    model: deepseek-v4.1-flash
+    reasoningEffort: high

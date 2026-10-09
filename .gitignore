@@ -147,3 +147,27 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Local credentials, profiles, sessions and private compatibility captures
+credentials.*
+.credentials*
+secrets/
+.dsh/
+.local/
+local-artifacts/
+compatibility/private/
+*.local.json
+*.local.yml
+*.local.yaml
+*.pem
+*.key
+*.p12
+*.pfx
+*.sqlite*
+*.db
+*.jsonl
+*.jsonl.*
+*.bak
+*.backup
+.DS_Store
+lib/
