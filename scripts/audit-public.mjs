@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const git = (...args) => execFileSync('git', args, { cwd: root, maxBuffer: 64 * 1024 * 1024 });
 const findings = [];
-const privateName = /(?:^|\/)(?:\.?credentials(?:[./]|$)|secrets(?:\/|$)|\.dsh(?:\/|$)|\.local(?:\/|$)|local-artifacts(?:\/|$)|compatibility\/private(?:\/|$)|\.env(?:\.(?!example$|sample$)[^/]+)?$)|\.(?:pem|key|p12|pfx|sqlite\w*|db|jsonl(?:\.\w+)?|bak|backup)$/i;
+const privateName = /(?:^|\/)(?:\.?credentials(?:[./]|$)|docs(?:\/|$)|secrets(?:\/|$)|\.dsh(?:\/|$)|\.local(?:\/|$)|local-artifacts(?:\/|$)|compatibility\/private(?:\/|$)|\.env(?:\.(?!example$|sample$)[^/]+)?$)|\.(?:pem|key|p12|pfx|sqlite\w*|db|jsonl(?:\.\w+)?|bak|backup)$/i;
 const rules = [
   ['provider-token', /(?:oc_sk_|pplx-|sk-)[A-Za-z0-9_-]{16,}/],
   ['github-token', /(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,})/],

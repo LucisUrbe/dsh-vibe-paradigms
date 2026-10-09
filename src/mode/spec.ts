@@ -13,7 +13,7 @@ export interface ModeSpec {
 // This intermediate model is the source of truth, independent of Cordis YAML.
 export const modes: readonly ModeSpec[] = Object.freeze([
   { id: 'health', preset: 'vibe-health', available: true, permission: 'read-only', plan: false, workspace: 'selected', memory: 'disabled', allowedTools: ['vibe_health'] },
-  { id: 'chat', preset: 'vibe-chat', available: false, permission: 'read-only', plan: false, workspace: 'neutral', memory: 'read-write', allowedTools: ['web_search', 'web_fetch', 'safe_calculate', 'memory_read', 'memory_search', 'memory_upsert', 'memory_delete'] },
+  { id: 'chat', preset: 'vibe-chat', available: true, permission: 'read-only', plan: false, workspace: 'neutral', memory: 'read-write', allowedTools: ['web_search', 'web_fetch', 'safe_calculate', 'memory_read', 'memory_search', 'memory_upsert', 'memory_delete'] },
   { id: 'ask', preset: 'vibe-ask', available: false, permission: 'read-only', plan: false, workspace: 'selected', memory: 'disabled', allowedTools: ['read', 'grep', 'glob', 'read_image'] },
   { id: 'spec', preset: 'vibe-spec', available: false, permission: 'read-only', plan: true, workspace: 'selected', memory: 'disabled', allowedTools: ['read', 'grep', 'glob', 'read_image', 'exit_plan_mode'] },
   { id: 'agent', preset: 'standard', available: true, permission: 'workspace-write', plan: 'user-controlled', workspace: 'selected', memory: 'disabled', allowedTools: 'upstream' },

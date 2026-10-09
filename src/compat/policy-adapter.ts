@@ -5,6 +5,7 @@ import { recommendedPolicy, type PolicyTrigger } from '../mode/policy.js';
 import { assertRequired } from './probe.js';
 import { isAbsolute } from 'node:path';
 import { workspaceProblem } from '../mode/workspace-policy.js';
+import type {} from '../workspace.js';
 
 export function applyPolicy(ctx: Context, agent: Agent, trigger: PolicyTrigger): void {
   const mode = modeForPreset(ctx.agentPresets.composedPreset(agent.ctx));
@@ -12,7 +13,8 @@ export function applyPolicy(ctx: Context, agent: Agent, trigger: PolicyTrigger):
   const policy = recommendedPolicy(mode, trigger);
   if (!policy) return;
   const cwd = agent.session.header.cwd;
-  const problem = workspaceProblem(mode, { selected: typeof cwd === 'string' && isAbsolute(cwd) });
+  const managed = ctx.get('vibeChatWorkspace');
+  const problem = workspaceProblem(mode, { selected: typeof cwd === 'string' && isAbsolute(cwd), ...(mode.workspace === 'neutral' && cwd === managed?.path ? { managedKind: 'neutral' as const } : {}) });
   if (problem) throw new Error(problem);
   assertRequired(ctx, ['permissionPresets']);
   // A preset without a plan service cannot accidentally enter plan mode.

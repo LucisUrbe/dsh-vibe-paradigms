@@ -171,3 +171,5 @@ compatibility/private/
 *.backup
 .DS_Store
 lib/
+docs/
+compatibility/

@@ -10,7 +10,7 @@ const profile = process.argv[2] ?? 'five-modes';
 if (!/^[a-z][a-z0-9-]*$/.test(profile) || ['desktop', 'web', 'headless', 'tui'].includes(profile)) {
   throw new Error('Choose a non-reserved custom profile name.');
 }
-const home = resolve(process.env.DSH_HOME ?? resolve(root, '.local/dsh'));
+const home = resolve(process.env.DSH_HOME ?? resolve(root, 'docs/runtime/dsh'));
 const env = { ...process.env, DSH_HOME: home };
 function run(args, silent = false) {
   const result = spawnSync('dsh', args, { cwd: root, env, stdio: ['ignore', silent ? 'ignore' : 'inherit', 'inherit'] });

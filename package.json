@@ -1,7 +1,7 @@
 {
   "name": "dsh-vibe-paradigms",
   "version": "0.1.0",
-  "description": "Out-of-tree working modes for DeepSeek Harness; Milestone 1 health skeleton",
+  "description": "Out-of-tree working modes for DeepSeek Harness",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -20,7 +20,19 @@
       "types": "./lib/health.d.ts",
       "default": "./lib/health.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./chat": {
+      "types": "./lib/chat.d.ts",
+      "default": "./lib/chat.js"
+    },
+    "./workspace": {
+      "types": "./lib/workspace.d.ts",
+      "default": "./lib/workspace.js"
+    },
+    "./official-search": {
+      "types": "./lib/search/official.d.ts",
+      "default": "./lib/search/official.js"
+    }
   },
   "files": [
     "lib",
@@ -48,12 +60,19 @@
     "@deepseek-ai/dsh-agent": "0.2.0-rc.2",
     "@deepseek-ai/dsh-agent-preset": "0.2.0-rc.2",
     "@deepseek-ai/dsh-agent-preset-registry": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-launch-environment": "0.2.0-rc.2",
     "@deepseek-ai/dsh-permission-presets": "0.2.0-rc.2",
     "@deepseek-ai/dsh-plan-mode": "0.2.0-rc.2",
     "@deepseek-ai/dsh-system-prompt": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-tool-web": "0.2.0-rc.2",
     "@deepseek-ai/dsh-tools": "0.2.0-rc.2",
     "@deepseek-ai/dsh-web": "0.2.0-rc.2",
-    "@deepseek-ai/dsh-workspace": "0.2.0-rc.2"
+    "@deepseek-ai/dsh-web-fetch-http": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-web-search-deepseek": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-workspace": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-credentials": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-deepseek-account": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-scope": "0.2.0-rc.2"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.4",
@@ -62,17 +81,31 @@
     "@deepseek-ai/dsh-agent": "0.2.0-rc.2",
     "@deepseek-ai/dsh-agent-preset": "0.2.0-rc.2",
     "@deepseek-ai/dsh-agent-preset-registry": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-credentials": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-deepseek-account": "0.2.0-rc.2",
     "@deepseek-ai/dsh-hmr": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-launch-environment": "0.2.0-rc.2",
     "@deepseek-ai/dsh-permission-presets": "0.2.0-rc.2",
     "@deepseek-ai/dsh-plan-mode": "0.2.0-rc.2",
     "@deepseek-ai/dsh-scope": "0.2.0-rc.2",
     "@deepseek-ai/dsh-session-projection": "0.2.0-rc.2",
     "@deepseek-ai/dsh-system-prompt": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-tool-web": "0.2.0-rc.2",
     "@deepseek-ai/dsh-tools": "0.2.0-rc.2",
     "@deepseek-ai/dsh-web": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-web-fetch-http": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-web-search-deepseek": "0.2.0-rc.2",
     "@deepseek-ai/dsh-workspace": "0.2.0-rc.2",
     "@types/node": "24.10.1",
     "typescript": "6.0.3",
     "yaml": "2.8.2"
+  },
+  "dependencies": {
+    "decimal.js": "10.6.0"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-deepseek-account": {
+      "optional": true
+    }
   }
 }
