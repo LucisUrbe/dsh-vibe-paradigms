@@ -32,6 +32,17 @@
     "./official-search": {
       "types": "./lib/search/official.d.ts",
       "default": "./lib/search/official.js"
+    },
+    "./search": {
+      "types": "./lib/search/index.d.ts",
+      "default": "./lib/search/index.js"
+    },
+    "./search-settings": {
+      "types": "./lib/search/settings.d.ts",
+      "default": "./lib/search/settings.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
     }
   },
   "files": [
@@ -43,6 +54,15 @@
   "dsh": {
     "bundle": {
       "patch": "./generated/cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-plugin-manager",
+        "@deepseek-ai/dsh-api-remotes"
+      ],
+      "platform": "web"
     }
   },
   "scripts": {
@@ -72,7 +92,9 @@
     "@deepseek-ai/dsh-workspace": "0.2.0-rc.2",
     "@deepseek-ai/dsh-credentials": "0.2.0-rc.2",
     "@deepseek-ai/dsh-deepseek-account": "0.2.0-rc.2",
-    "@deepseek-ai/dsh-scope": "0.2.0-rc.2"
+    "@deepseek-ai/dsh-scope": "0.2.0-rc.2",
+    "@deepseek-ai/schemastery": "3.18.4",
+    "@deepseek-ai/dsh-settings": "0.2.0-rc.2"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.4",
@@ -98,7 +120,9 @@
     "@deepseek-ai/dsh-workspace": "0.2.0-rc.2",
     "@types/node": "24.10.1",
     "typescript": "6.0.3",
-    "yaml": "2.8.2"
+    "yaml": "2.8.2",
+    "@deepseek-ai/schemastery": "3.18.4",
+    "@deepseek-ai/dsh-settings": "0.2.0-rc.2"
   },
   "dependencies": {
     "decimal.js": "10.6.0"

@@ -29,5 +29,5 @@ export function probe(ctx: Context, agent?: Agent) {
 export function assertRequired(ctx: Context, features: readonly (keyof ReturnType<typeof probe>)[], agent?: Agent): void {
   const result = probe(ctx, agent);
   const missing = features.filter(feature => !result[feature]);
-  if (missing.length) throw new Error(`Five Modes compatibility check failed: ${missing.join(', ')}.`);
+  if (missing.length) throw new Error(`Vibe Paradigms compatibility check failed: ${missing.join(', ')}.`);
 }

@@ -15,7 +15,11 @@ export function applyPolicy(ctx: Context, agent: Agent, trigger: PolicyTrigger):
   const cwd = agent.session.header.cwd;
   const managed = ctx.get('vibeChatWorkspace');
   const problem = workspaceProblem(mode, { selected: typeof cwd === 'string' && isAbsolute(cwd), ...(mode.workspace === 'neutral' && cwd === managed?.path ? { managedKind: 'neutral' as const } : {}) });
-  if (problem) throw new Error(problem);
+  // Workspace selection is user input, including persisted pre-migration cwd.
+  // Throwing from this lifecycle listener terminates the Desktop Host. Apply
+  // the restricted permission; the preset's execution guard rejects every
+  // tool at an invalid cwd without turning a recoverable choice into a crash.
+  if (problem) ctx.logger?.warn(`${mode.preset}: ${problem} Tools remain blocked outside the managed workspace.`);
   assertRequired(ctx, ['permissionPresets']);
   // A preset without a plan service cannot accidentally enter plan mode.
   const plan = ctx.agentPresets.serviceFor(agent, 'planMode');

@@ -32,7 +32,7 @@ export class MarkdownMemory {
   readonly directory: string;
   readonly file: string;
   constructor(home: string) {
-    this.directory = join(resolve(home), 'five-modes', 'memory');
+    this.directory = join(resolve(home), 'vibe-paradigms', 'memory');
     this.file = join(this.directory, 'memory.md');
   }
   private async prepare(): Promise<void> {

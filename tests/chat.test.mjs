@@ -17,7 +17,7 @@ import { readFile } from 'node:fs/promises';
 import * as workspace from '../lib/workspace.js';
 import { createLaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment';
 
-test('actual Chat preset isolates official web selection, native tools, prompt, memory and managed workspace', async () => {
+test('actual Chat preset isolates routed web selection, native tools, prompt, memory and managed workspace', async () => {
   const home = await mkdtemp(join(tmpdir(), 'vibe-chat-')), ctx = new Context(), scopes = [];
   try {
     ctx.baseUrl = new URL('../', import.meta.url).href;
@@ -33,7 +33,7 @@ test('actual Chat preset isolates official web selection, native tools, prompt, 
     ctx.web.registerSearchProvider({ id: 'existing-search', available: () => true, search: async () => ({ sources: [{ url: 'https://example.com/root' }], truncated: false }) });
     await ctx.plugin(AgentPresetRegistry, { default: 'vibe-chat' });
     const patch = parse(await readFile(new URL('../generated/cordis.patch.yml', import.meta.url), 'utf8'));
-    const definition = patch[0].insert.find(row => row.id === 'vibe-preset-chat').config;
+    const definition = patch.flatMap(row => row.insert ?? []).find(row => row.id === 'vibe-preset-chat').config;
     const release = await ctx.agentPresets.register(definition);
     const roster = await ctx.agentPresets.list();
     assert.equal(roster.find(preset => preset.id === 'vibe-chat').broken, undefined);
@@ -58,29 +58,41 @@ test('actual Chat preset isolates official web selection, native tools, prompt, 
     assert.equal(assembly.sections.length, 1); assert.match(renderPrompt(assembly), /conversational assistant/); assert.equal(assembly.contexts.length, 0);
     assert.equal(ctx.agentPresets.serviceFor(agent, 'web') === ctx.web, false);
     assert.equal((await ctx.web.search({ query: 'root' })).sources[0].url, 'https://example.com/root');
-    // Official provider resolves no fixture credential and fails honestly; it
-    // must not silently fall back to the globally configured search backend.
+    // Missing fixture credentials fail without touching the account provider.
     const search = await exec('web_search', { queries: ['fixture query'] });
-    assert.equal(search.isError, true); assert.match(search.error.message, /key|credential|configured|available/i);
+    assert.equal(search.isError, true); assert.match(search.error.message, /failed/i);
     const fetch = globalThis.fetch, requests = [];
-    ctx.provide('deepseekAccount', { resolveToken: async endpoint => { assert.equal(endpoint, 'https://api.deepseek.com/anthropic/v1/messages'); return 'fixture-account-token'; } });
+    ctx.provide('agents', { currentInitiator: () => ({ session: { append: () => { throw new Error('Search must not write unsupported downstream Session events.'); } } }) });
+    let accountCalls = 0;
+    ctx.provide('deepseekAccount', { resolveToken: async () => { accountCalls++; return 'fixture-account-token'; } });
+    ctx.provide('credentials', { resolve: async ref => ({value: String(ref) === 'PERPLEXITY_API_KEY' ? 'fixture-perplexity-key' : 'fixture-doubao-key'}) });
     try {
       globalThis.fetch = async (url, options) => {
         requests.push({ url, body: JSON.parse(options.body) });
-        assert.equal(options.headers['x-dsh-auth-token'], 'fixture-account-token');
-        assert.equal(options.headers.authorization, undefined);
+        assert.equal(options.headers.Authorization, 'Bearer fixture-perplexity-key');
         assert.equal(options.redirect, 'error'); assert.ok(options.signal);
-        return new Response(JSON.stringify({ content: [
-          { type: 'web_search_tool_result', content: [{ type: 'web_search_result', url: 'https://example.com/search', title: 'Search fixture' }] },
-          { type: 'text', citations: [{ url: 'https://example.com/search', cited_text: 'Fixture snippet.' }] },
-        ] }), { status: 200 });
+        return Response.json({results: [{url: 'https://example.com/search?utm_source=fixture', title: 'Search fixture', snippet: 'Fixture snippet.'}]});
       };
-      const goodSearch = await exec('web_search', { queries: ['fixture official search'] });
+      const goodSearch = await exec('web_search', { queries: ['fixture search'] });
       assert.equal(goodSearch.isError, false);
       assert.equal(requests.length, 1);
-      assert.equal(requests[0].body.tools[0].type, 'web_search_20250305');
-      assert.equal(goodSearch.value.sources[0].snippet, 'Fixture snippet.');
+      assert.equal(requests[0].url, 'https://api.perplexity.ai/search');
+      assert.equal(requests[0].body.query, 'fixture search');
+      assert.equal(goodSearch.value.sources[0].url, 'https://example.com/search');
+      assert.match(goodSearch.value.sources[0].snippet, /Index provenance: perplexity-search-raw.*Fixture snippet\./);
       assert.match(goodSearch.content[0].text, /untrusted/);
+      assert.match(goodSearch.content[0].text, /Index provenance:.*perplexity-search-raw/);
+      assert.equal(accountCalls, 0);
+      // The official tool caps across queries. Provenance must travel with
+      // retained sources rather than spilling dropped URLs into content.
+      globalThis.fetch = async (_url, options) => {
+        const { query } = JSON.parse(options.body);
+        return Response.json({ results: Array.from({ length: 8 }, (_, index) => ({ url: `https://example.com/${query}/${index}`, snippet: 'Evidence' })) });
+      };
+      const multi = await exec('web_search', { queries: ['alpha', 'beta'] });
+      assert.equal(multi.isError, false); assert.equal(multi.value.sources.length, 8); assert.equal(multi.value.truncated, true);
+      assert.equal(multi.value.content.includes('https://'), false);
+      assert.ok(multi.value.sources.every(row => row.snippet.includes('Index provenance: perplexity-search-raw')));
     } finally { globalThis.fetch = fetch; }
     for (const url of ['file:///etc/passwd', 'http://127.0.0.1/private']) assert.equal((await exec('web_fetch', { url })).isError, true);
     agent.session.header.cwd = home;

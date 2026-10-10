@@ -16,7 +16,7 @@ export function apply(ctx: Context, config: Config = {}): void {
   ctx.tools.guard(exec => toolDenial(mode, exec.name));
   ctx.tools.register({
     name: 'vibe_health',
-    description: 'Check that the Five Modes health preset and public Harness services are available. Does not read files or access the network.',
+    description: 'Check that the Vibe Paradigms health preset and public Harness services are available. Does not read files or access the network.',
     parameters: { type: 'object', properties: {}, additionalProperties: false },
     output: {
       schema: { type: 'object', properties: { status: { type: 'string' }, message: { type: 'string' }, preset: { type: 'string' }, testedDshVersions: { type: 'array', items: { type: 'string' } }, capabilities: { type: 'object', properties: Object.fromEntries(Object.keys(probe(ctx)).map(key => [key, { type: 'boolean' }])), additionalProperties: false } }, required: ['status', 'message', 'preset', 'testedDshVersions', 'capabilities'], additionalProperties: false },
@@ -24,7 +24,7 @@ export function apply(ctx: Context, config: Config = {}): void {
     },
     async execute(_args, exec) {
       exec.signal.throwIfAborted();
-      return { status: 'ok', message: config.message ?? 'Hello from Five Modes.', preset: 'vibe-health', testedDshVersions: [...testedDshVersions], capabilities: probe(ctx, exec.agent) };
+      return { status: 'ok', message: config.message ?? 'Hello from Vibe Paradigms.', preset: 'vibe-health', testedDshVersions: [...testedDshVersions], capabilities: probe(ctx, exec.agent) };
     },
   });
 }

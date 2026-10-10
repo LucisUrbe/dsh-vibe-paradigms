@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { parse, stringify } from 'yaml';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const profile = process.argv[2] ?? 'five-modes';
+const profile = process.argv[2] ?? 'vibe-paradigms';
 if (!/^[a-z][a-z0-9-]*$/.test(profile) || ['desktop', 'web', 'headless', 'tui'].includes(profile)) {
   throw new Error('Choose a non-reserved custom profile name.');
 }

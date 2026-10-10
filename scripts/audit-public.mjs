@@ -18,7 +18,10 @@ const rules = [
 ];
 // Compare local credentials without displaying them, including nonstandard key formats.
 const known = existsSync(resolve(root, 'credentials.log'))
-  ? readFileSync(resolve(root, 'credentials.log'), 'utf8').match(/(?:oc_sk_|pplx-|sk-)[A-Za-z0-9_-]+/g) ?? [] : [];
+  ? [...new Set([
+    ...readFileSync(resolve(root, 'credentials.log'), 'utf8').match(/(?:oc_sk_|pplx-|sk-)[A-Za-z0-9_-]+/g) ?? [],
+    ...readFileSync(resolve(root, 'credentials.log'), 'utf8').split(/\r?\n/).map(line => line.trim()).filter(line => /^[A-Za-z0-9+\/_=-]{24,}$/.test(line)),
+  ])] : [];
 
 function scan(name, bytes, scope) {
   if (privateName.test(name)) findings.push({ scope, file: name, rule: 'private-artifact' });

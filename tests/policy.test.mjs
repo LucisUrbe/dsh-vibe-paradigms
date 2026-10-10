@@ -44,6 +44,19 @@ test('workspace selection and managed workspace requirements remain separate fro
   assert.equal(workspaceProblem(modeForPreset('vibe-chat'), { selected: true, managedKind: 'neutral' }), undefined);
 });
 
+test('Chat selection outside managed storage applies restrictive permission without crashing the Host', () => {
+  const calls = [], warnings = [], session = { header: { cwd: '/previous-storage/chat-workspace' } }, agent = { ctx: {}, session };
+  const ctx = {
+    agentPresets: { composedPreset: () => 'vibe-chat', serviceFor: () => undefined },
+    vibeChatWorkspace: { path: '/managed/chat-workspace' },
+    permissionPresets: { set: (target, value) => calls.push([target, value]) },
+    logger: { warn: text => warnings.push(text) },
+  };
+  ctx.get = name => ctx[name];
+  assert.doesNotThrow(() => applyPolicy(ctx, agent, 'selected'));
+  assert.deepEqual(calls, [[session, 'read-only']]); assert.match(warnings[0], /Tools remain blocked/);
+});
+
 test('missing security seam fails explicitly', () => {
   assert.throws(() => assertRequired({ get: () => undefined }, ['toolsGuard', 'agentPresets']), /toolsGuard, agentPresets/);
 });
