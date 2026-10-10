@@ -16,10 +16,6 @@
       "types": "./lib/index.d.ts",
       "default": "./lib/index.js"
     },
-    "./health": {
-      "types": "./lib/health.d.ts",
-      "default": "./lib/health.js"
-    },
     "./package.json": "./package.json",
     "./chat": {
       "types": "./lib/chat.d.ts",

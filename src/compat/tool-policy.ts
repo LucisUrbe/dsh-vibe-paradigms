@@ -14,7 +14,6 @@ export function installToolPolicy(agent: Agent) {
     assertRequired(ctx, ['toolsRestrict', 'toolsGuard', 'nativePresentation']);
     const mounted = new Set(ctx.tools.schemas(agent).map(tool => tool.name));
     const allow = allowlist.filter(name => mounted.has(name));
-    if (mode.id === 'health' && !allow.includes('vibe_health')) throw new Error('Health tool is missing from the actual Agent scope.');
     if (mode.id === 'chat' && allow.length !== allowlist.length) throw new Error('Chat requires its complete tool suite in the actual Agent scope.');
     ctx.tools.presentAs('native');
     ctx.tools.restrict({ allow });

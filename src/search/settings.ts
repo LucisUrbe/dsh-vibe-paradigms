@@ -2,18 +2,19 @@ import { Service, type Context, type Volatile } from '@deepseek-ai/cordis';
 import z from '@deepseek-ai/schemastery';
 import type {} from '@deepseek-ai/dsh-settings';
 import type { Config as SearchOptions } from './index.js';
+import { searchPolicies, type SearchPolicy } from './router.js';
 
 export const name = 'vibe-search-settings';
 export const inject = ['settings'];
 export const Config = z.object({
-  policy: z.union(['auto', 'cross-check', 'deepseek-official']).default('auto').volatile(),
+  policy: z.union([...searchPolicies]).default('auto').volatile(),
   allowOfficialFallback: z.boolean().default(false).volatile(),
   doubaoEdition: z.union(['custom', 'global']).default('custom').volatile(),
   perplexityKeyEnv: z.string().role('credential-ref').default('PERPLEXITY_API_KEY').volatile(),
   doubaoKeyEnv: z.string().role('credential-ref').default('DOUBAO_SEARCH_API_KEY').volatile(),
 }).default({});
 export interface Config {
-  policy: Volatile<'auto' | 'cross-check' | 'deepseek-official'>;
+  policy: Volatile<SearchPolicy>;
   allowOfficialFallback: Volatile<boolean>;
   doubaoEdition: Volatile<'custom' | 'global'>;
   perplexityKeyEnv: Volatile<string>;

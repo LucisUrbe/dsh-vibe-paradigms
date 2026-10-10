@@ -1,42 +1,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Context } from '@deepseek-ai/cordis';
-import { Loader, Group } from '@deepseek-ai/cordis-plugin-loader';
-import { AgentPresetRegistry } from '@deepseek-ai/dsh-agent-preset-registry';
-import { SessionProjectionRegistry } from '@deepseek-ai/dsh-session-projection';
-import { SystemPrompt, renderPrompt } from '@deepseek-ai/dsh-system-prompt';
-import { ToolRuntime } from '@deepseek-ai/dsh-tools';
+import { renderPrompt } from '@deepseek-ai/dsh-system-prompt';
+import { presetDisplayText } from '@deepseek-ai/dsh-agent-preset-registry/display';
 import { WebRuntime } from '@deepseek-ai/dsh-web';
 import { createScope } from '@deepseek-ai/dsh-scope';
 import { installToolPolicy } from '../lib/compat/tool-policy.js';
-import { mkdtemp, rm, readdir } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { parse } from 'yaml';
-import { readFile } from 'node:fs/promises';
-import * as workspace from '../lib/workspace.js';
-import { createLaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment';
+import { readdir } from 'node:fs/promises';
+import { chatRuntime } from './fixtures/chat-runtime.mjs';
 
 test('actual Chat preset isolates routed web selection, native tools, prompt, memory and managed workspace', async () => {
-  const home = await mkdtemp(join(tmpdir(), 'vibe-chat-')), ctx = new Context(), scopes = [];
+  const { home, ctx, workspaces, definition, dispose } = await chatRuntime(), scopes = [];
   try {
-    ctx.baseUrl = new URL('../', import.meta.url).href;
-    await ctx.plugin(Loader, { baseUrl: ctx.baseUrl });
-    ctx.loader.builtins.group = Group;
-    await ctx.plugin(SessionProjectionRegistry); await ctx.plugin(SystemPrompt); await ctx.plugin(ToolRuntime);
-    ctx.provide('permissionPresets', { set() {} });
-    ctx.provide('launchEnvironment', createLaunchEnvironmentSnapshot([{ source: 'process', values: { DSH_HOME: home } }]));
-    const workspaces = [];
-    ctx.provide('workspaceRegistry', { create: async (path, title) => { workspaces.push({ path, title }); }, list: () => workspaces });
-    await ctx.plugin(workspace);
     await ctx.plugin(WebRuntime, { searchProvider: 'existing-search' });
     ctx.web.registerSearchProvider({ id: 'existing-search', available: () => true, search: async () => ({ sources: [{ url: 'https://example.com/root' }], truncated: false }) });
-    await ctx.plugin(AgentPresetRegistry, { default: 'vibe-chat' });
-    const patch = parse(await readFile(new URL('../generated/cordis.patch.yml', import.meta.url), 'utf8'));
-    const definition = patch.flatMap(row => row.insert ?? []).find(row => row.id === 'vibe-preset-chat').config;
     const release = await ctx.agentPresets.register(definition);
     const roster = await ctx.agentPresets.list();
     assert.equal(roster.find(preset => preset.id === 'vibe-chat').broken, undefined);
+    assert.equal(workspaces[0].title, '聊天模式');
+    for (const language of ['zh', 'en']) {
+      assert.deepEqual(presetDisplayText(roster[0], key => `${language}:${key}`), {
+        name: '聊天模式', description: '在聊天工作区进行对话、网页搜索、安全计算和显式长期记忆管理',
+      });
+    }
     const agent = { session: { id: 'chat-fixture', header: { cwd: ctx.vibeChatWorkspace.path } } };
     const scope = createScope(ctx, agent); scopes.push(scope); agent.ctx = scope.ctx;
     await ctx.agentPresets.mount(agent.ctx, 'vibe-chat'); await installToolPolicy(agent);
@@ -102,5 +87,5 @@ test('actual Chat preset isolates routed web selection, native tools, prompt, me
     await scope.dispose(); scopes.length = 0; await release();
     assert.deepEqual(await ctx.agentPresets.list(), []);
     assert.equal(ctx.tools.get('memory_read'), undefined);
-  } finally { for (const scope of scopes) await scope.dispose(); await ctx.fiber.dispose(); await rm(home, { recursive: true, force: true }); }
+  } finally { for (const scope of scopes) await scope.dispose(); await dispose(); }
 });

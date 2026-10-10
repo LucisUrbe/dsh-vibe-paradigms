@@ -8,7 +8,8 @@ test('live Loader settings update existing root and isolated routers without rem
   ctx.baseUrl=new URL('../',import.meta.url).href;await ctx.plugin(Loader,{baseUrl:ctx.baseUrl});
   let official={ns:'web-search-deepseek',value:{baseURL:'https://example.com/anthropic/v1',model:'fixture-model',maxUses:2,maxTokens:512,apiKeyEnv:'FIXTURE_OFFICIAL'}};
   ctx.provide('settings',{configure:()=>()=>released++,describe:()=>[official]});
-  ctx.provide('credentials',{resolve:async ref=>({value:'fixture-'+ref})});
+  let selectedRef;const credentialReads=[];
+  ctx.provide('credentials',{resolve:async ref=>{credentialReads.push(String(ref));if(selectedRef&&String(ref)!==selectedRef)throw new Error('Unselected credentials must not be resolved');return{value:'fixture-'+ref};}});
   let accounts=0;ctx.provide('deepseekAccount',{resolveToken:async()=>{accounts++;return'fixture-account';}});
   const id=await ctx.loader.create({id:'vibe-search-settings',name:'dsh-vibe-paradigms/search-settings'});await ctx.loader.await();
   await ctx.plugin(WebRuntime,{searchProvider:'vibe-paradigms-search'});await ctx.loader.create({name:'dsh-vibe-paradigms/search'});await ctx.loader.await();
@@ -29,6 +30,24 @@ test('live Loader settings update existing root and isolated routers without rem
   await rootWeb.search({query:'ordinary documentation'});assert.equal(requests.length,5);
   await ctx.loader.update(id,{config:{policy:'auto',doubaoEdition:'custom'}});await ctx.loader.await();
   const before=requests.length;await childWeb.search({query:'ordinary documentation'});assert.equal(requests.length,before+1);assert.equal(accounts,0);
+  for(const [policy,ref,edition,endpoint] of [
+   ['perplexity-only','PERPLEXITY_API_KEY','custom','https://api.perplexity.ai/search'],
+   ['doubao-only','DOUBAO_SEARCH_API_KEY','custom','https://open.feedcoopapi.com/search_api/web_search'],
+   ['doubao-only','DOUBAO_SEARCH_API_KEY','global','https://open.feedcoopapi.com/search_api/global_search'],
+  ]){
+   selectedRef=ref;credentialReads.length=0;
+   await ctx.loader.update(id,{config:{policy,doubaoEdition:edition,allowOfficialFallback:true}});await ctx.loader.await();
+   assert.equal(ctx.vibeSearchSettings.options().policy,policy);
+   assert.equal(ctx.loader.resolve(id).fiber.uid,ownerUid);
+   const start=requests.length;
+   for(const web of [rootWeb,childWeb]){
+    const value=await web.search({query:policy==='perplexity-only'?'事实核查：北京新闻':'verify medical news'});
+    assert.match(value.content,new RegExp('Search policy: '+policy));assert.equal(value.sources.length,1);
+   }
+   assert.deepEqual(requests.slice(start).map(row=>row.url),[endpoint,endpoint]);
+   assert.deepEqual(credentialReads,[ref,ref]);assert.equal(accounts,0);
+  }
+  selectedRef=undefined;
   const provider=createOfficialSearch(child);globalThis.fetch=async(url,options)=>{assert.equal(url,'https://example.com/anthropic/v1/messages');assert.equal(options.headers['x-api-key'],'fixture-FIXTURE_OFFICIAL');const body=JSON.parse(options.body);assert.equal(body.model,'fixture-model');assert.equal(body.max_tokens,512);return Response.json({content:[{type:'web_search_tool_result',content:[{type:'web_search_result',url:'https://example.com/official'}]}]});};
   await provider.search({query:'explicit official'});assert.equal(accounts,0,'account token must not go to a custom endpoint');
   await ctx.loader.remove(id);await ctx.loader.await();assert.equal(released,1);assert.equal(ctx.get('vibeSearchSettings'),undefined);

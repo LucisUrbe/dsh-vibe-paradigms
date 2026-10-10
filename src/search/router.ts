@@ -3,7 +3,8 @@ import type { WebSearchProvider, WebSearchRequest, WebSearchResult } from '@deep
 import { queryText, resultLimit } from './http.js';
 import { source, mergeSources, shortText, type SearchSource } from './normalize.js';
 
-export type SearchPolicy = 'auto' | 'cross-check' | 'deepseek-official';
+export const searchPolicies = ['auto', 'cross-check', 'perplexity-only', 'doubao-only', 'deepseek-official'] as const;
+export type SearchPolicy = typeof searchPolicies[number];
 export interface SearchAttempt { provider: string; status: 'ok' | 'empty' | 'error'; code?: string }
 export interface SearchTrace { policy: SearchPolicy; attempts: SearchAttempt[]; sources: SearchSource[]; truncated: boolean }
 const chinese = /\p{Script=Han}|\b(?:China|Chinese|Beijing|Shanghai)\b/iu;
@@ -18,6 +19,7 @@ export class SearchRouter implements WebSearchProvider {
     const options = typeof this.policy === 'function' ? this.policy() : { policy: this.policy, allowOfficialFallback: this.allowOfficialFallback };
     const configured = options.policy ?? 'auto';
     const policy = configured === 'auto' && check.test(query) ? 'cross-check' : configured;
+    const singleProvider = policy === 'perplexity-only' ? 'perplexity-search-raw' : policy === 'doubao-only' ? 'doubao-search' : undefined;
     const primary = chinese.test(query) ? 'doubao-search' : 'perplexity-search-raw';
     const secondary = primary === 'doubao-search' ? 'perplexity-search-raw' : 'doubao-search';
     const run = async (id: string) => {
@@ -37,6 +39,7 @@ export class SearchRouter implements WebSearchProvider {
     let upstreamTruncated = false;
     const collect = (result: Awaited<ReturnType<typeof run>>) => { attempts.push(result.attempt); groups.push(result.rows); upstreamTruncated ||= result.truncated; };
     if (policy === 'deepseek-official') collect(await run('deepseek-official'));
+    else if (singleProvider) collect(await run(singleProvider));
     else if (policy === 'cross-check') {
       // Await both to keep deterministic priority/provenance, even on failure.
       const settled = await Promise.allSettled([run(primary), run(secondary)]);
@@ -45,11 +48,11 @@ export class SearchRouter implements WebSearchProvider {
       collect(await run(primary));
       if (!groups[0]!.length) collect(await run(secondary));
     }
-    if (policy !== 'deepseek-official' && options.allowOfficialFallback && !groups.some(group => group.length)) collect(await run('deepseek-official'));
+    if (!singleProvider && policy !== 'deepseek-official' && options.allowOfficialFallback && !groups.some(group => group.length)) collect(await run('deepseek-official'));
     signal?.throwIfAborted();
     const merged = mergeSources(groups, limit), truncated = upstreamTruncated || merged.truncated;
     this.record?.({ policy, attempts, sources: merged.sources, truncated });
-    if (attempts.every(attempt => attempt.status === 'error')) throw new WebError('Search providers failed: ' + attempts.map(attempt => `${attempt.provider} (${attempt.code})`).join(', ') + '. DeepSeek official search requires explicit configuration.', 'WEB_SEARCH_ALL_FAILED');
+    if (attempts.every(attempt => attempt.status === 'error')) throw new WebError('Search providers failed: ' + attempts.map(attempt => `${attempt.provider} (${attempt.code})`).join(', ') + (singleProvider ? '. This policy uses only the selected provider.' : '. DeepSeek official search requires explicit configuration.'), 'WEB_SEARCH_ALL_FAILED');
     // This Host version projects source extensions away. Put provenance in
     // each portable snippet, so the official multi-query merge drops it with
     // its source instead of leaving over-budget URL lists in content.

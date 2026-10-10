@@ -11,7 +11,7 @@ test('restricted modes deny future tools; Standard inherits upstream tools', () 
     for (const tool of ['bash', 'run_code', 'plugin_manager', 'future_tool']) assert.ok(toolDenial(mode, tool));
   }
   assert.equal(toolDenial(modeForPreset('standard'), 'future_tool'), undefined);
-  assert.equal(toolDenial(modeForPreset('vibe-health'), 'vibe_health'), undefined);
+  assert.equal(toolDenial(modeForPreset('vibe-chat'), 'safe_calculate'), undefined);
 });
 
 test('resume and fork preserve permission and plan; inactive modes cannot apply policies', () => {
@@ -26,8 +26,9 @@ test('resume and fork preserve permission and plan; inactive modes cannot apply 
 test('policy uses actual composition, Session permission target, and isolated plan service', () => {
   const calls = [], session = { header: { agentPreset: 'standard', cwd: '/fixture' } }, agent = { ctx: {}, session };
   const ctx = {
-    agentPresets: { composedPreset: () => 'vibe-health', serviceFor: () => ({ set: (target, value) => calls.push(['plan', target, value]) }) },
+    agentPresets: { composedPreset: () => 'vibe-chat', serviceFor: () => ({ set: (target, value) => calls.push(['plan', target, value]) }) },
     permissionPresets: { set: (target, value) => calls.push(['permission', target, value]) },
+    vibeChatWorkspace: { path: '/fixture' },
   };
   ctx.get = name => ctx[name];
   applyPolicy(ctx, agent, 'fresh');
@@ -38,8 +39,8 @@ test('policy uses actual composition, Session permission target, and isolated pl
 });
 
 test('workspace selection and managed workspace requirements remain separate from permission', () => {
-  assert.ok(workspaceProblem(modeForPreset('vibe-health'), { selected: false }));
-  assert.equal(workspaceProblem(modeForPreset('vibe-health'), { selected: true }), undefined);
+  assert.ok(workspaceProblem(modeForPreset('vibe-ask'), { selected: false }));
+  assert.equal(workspaceProblem(modeForPreset('vibe-ask'), { selected: true }), undefined);
   assert.ok(workspaceProblem(modeForPreset('vibe-chat'), { selected: true }));
   assert.equal(workspaceProblem(modeForPreset('vibe-chat'), { selected: true, managedKind: 'neutral' }), undefined);
 });

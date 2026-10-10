@@ -4,7 +4,7 @@ import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment';
 import type { WebSearchProvider } from '@deepseek-ai/dsh-web';
 import { PerplexityRawSearch } from './perplexity.js';
 import { DoubaoSearch, type DoubaoEdition } from './doubao.js';
-import { SearchRouter, type SearchPolicy } from './router.js';
+import { SearchRouter, searchPolicies, type SearchPolicy } from './router.js';
 import { createOfficialSearch } from './official.js';
 import type {} from './settings.js';
 
@@ -25,7 +25,7 @@ export function apply(ctx: Context, config: Config = {}): void {
   // Static config remains the fallback for independently hosted realms.
   const options = (): Config => ctx.get('vibeSearchSettings')?.options() ?? config;
   const policy = config.policy ?? 'auto', edition = config.doubaoEdition ?? 'custom';
-  if (!['auto', 'cross-check', 'deepseek-official'].includes(policy) || !['custom', 'global'].includes(edition) || (config.allowOfficialFallback !== undefined && typeof config.allowOfficialFallback !== 'boolean')) throw new Error('Invalid vibe-paradigms search configuration.');
+  if (!searchPolicies.includes(policy) || !['custom', 'global'].includes(edition) || (config.allowOfficialFallback !== undefined && typeof config.allowOfficialFallback !== 'boolean')) throw new Error('Invalid vibe-paradigms search configuration.');
   const resolve = (reference: () => string) => {
     return async () => {
       const ref = credentialRef(reference());

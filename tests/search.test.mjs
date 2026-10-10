@@ -86,6 +86,36 @@ test('partial index failure is disclosed; empty/error failover stays bounded; of
   const empty=await new SearchRouter(providers).search({query:'query'}); assert.equal(empty.sources.length,0); assert.deepEqual(calls,['p','d']);
 });
 
+test('single-provider policies never cross-check or fall back, including failures and missing providers', async () => {
+  for (const [policy, selected] of [['perplexity-only', 'perplexity-search-raw'], ['doubao-only', 'doubao-search']]) {
+    for (const status of ['ok', 'empty', 'error', 'unavailable', 'missing']) {
+      const calls = [], traces = [];
+      const ids = ['perplexity-search-raw', 'doubao-search', 'deepseek-official'];
+      const providers = new Map(ids.map(id => [id, fake(id, async () => {
+        calls.push(id);
+        if (id === selected && status === 'error') throw new WebError('private payload', 'WEB_SEARCH_HTTP_503');
+        return id === selected && status === 'empty' ? { sources: [], truncated: false } : outcome(`https://${id}.example/evidence`, id);
+      })]));
+      if (status === 'unavailable') providers.get(selected).available = () => false;
+      if (status === 'missing') providers.delete(selected);
+      // Opposite-language and verification queries must still stay pinned.
+      const router = new SearchRouter(providers, policy, true, trace => traces.push(trace));
+      const result = router.search({ query: selected === 'perplexity-search-raw' ? '事实核查：北京新闻' : 'verify medical news' });
+      if (['error', 'unavailable', 'missing'].includes(status)) await assert.rejects(result, error => error.code === 'WEB_SEARCH_ALL_FAILED' && !error.message.includes('private payload'));
+      else {
+        const value = await result;
+        assert.equal(value.sources.length, status === 'ok' ? 1 : 0);
+        assert.match(value.content, new RegExp(`Search policy: ${policy}`));
+        assert.equal(value.content.includes('Cross-check'), false);
+      }
+      assert.deepEqual(calls, ['unavailable', 'missing'].includes(status) ? [] : [selected]);
+      assert.equal(traces[0].policy, policy);
+      assert.equal(traces[0].attempts.length, 1);
+      assert.equal(traces[0].attempts[0].provider, selected);
+    }
+  }
+});
+
 test('cancellation prevents fallback and aborts all concurrent index work', async () => {
   const controller=new AbortController(),calls=[];
   const ids=['perplexity-search-raw','doubao-search','deepseek-official'];

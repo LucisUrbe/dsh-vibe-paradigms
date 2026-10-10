@@ -18,6 +18,8 @@ export async function apply(ctx: Context): Promise<void> {
   await mkdir(directory, { recursive: true, mode: 0o700 });
   if ((await lstat(join(home, 'vibe-paradigms'))).isSymbolicLink() || (await lstat(directory)).isSymbolicLink()) throw new Error('Chat workspace must be a managed directory, not a symbolic link.');
   const path = await realpath(directory);
-  await ctx.workspaceRegistry.create(path, 'Chat');
+  const workspace = await ctx.workspaceRegistry.create(path, '聊天模式');
+  // Migrate the old default title while preserving user-authored titles.
+  if (workspace.title === 'Chat') await workspace.setTitle('聊天模式');
   ctx.provide('vibeChatWorkspace', { path, home });
 }

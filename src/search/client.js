@@ -6,8 +6,9 @@ window.__ModuleLoader__.load({
     const { SettingsForm, SettingsFormModel, SettingsSecretField } = require('@deepseek-ai/dsh-client-ui-primitives');
     const namespace = 'vibe-search-settings', dictionary = 'vibe.searchSettings';
     const zh = {
-      title: '搜索路由', description: 'Perplexity 与豆包搜索，供 Chat 和标准模式共用。DeepSeek 官方搜索默认不主动调用。',
+      title: '搜索路由', description: 'Perplexity 与豆包搜索，供聊天模式和标准模式共用。DeepSeek 官方搜索默认不主动调用。',
       policy: '搜索策略', auto: '自动：英文优先 Perplexity，中文优先豆包', check: '交叉查询：同时使用两个索引', official: 'DeepSeek 官方搜索（费用较高）',
+      perplexityOnly: '只使用 Perplexity', doubaoOnly: '只使用豆包', singleHint: '只请求选定提供方；失败或无结果时，不切换其他索引，也不使用官方兜底。',
       edition: '豆包搜索版本', custom: 'Custom', global: 'Global', fallback: '其他索引失败或无结果时，允许 DeepSeek 官方搜索兜底',
       editionHint: '版本按所选接口调用，请确认已开通对应版本。', policyHint: '自动策略在核查类问题上使用双索引；摘要仍需核对原始来源。',
       officialHint: '官方提供方的密钥、接口地址和搜索预算在“网页搜索”中配置。',
@@ -17,6 +18,7 @@ window.__ModuleLoader__.load({
     const en = {
       title: 'Search routing', description: 'Perplexity and Doubao search shared by Chat and Standard. DeepSeek official search is off by default.',
       policy: 'Search policy', auto: 'Auto: Perplexity for English, Doubao for Chinese', check: 'Cross-check: query both indexes', official: 'DeepSeek official search (higher cost)',
+      perplexityOnly: 'Perplexity only', doubaoOnly: 'Doubao only', singleHint: 'Use only the selected provider. Errors or empty results do not switch indexes or use official fallback.',
       edition: 'Doubao search edition', custom: 'Custom', global: 'Global', fallback: 'Allow DeepSeek official fallback when other indexes fail or return no results',
       editionHint: 'Uses the selected API; ensure this edition is enabled for your account.', policyHint: 'Auto uses both indexes for verification queries. Inspect primary sources to verify snippets.',
       officialHint: 'Configure official credentials, endpoint and search budget in Web search.',
@@ -29,7 +31,7 @@ window.__ModuleLoader__.load({
       constructor(ctx) {
         this.ctx = ctx; this.closed = false; this.generation = 0; this.credentials = {};
         this.scope = ctx.configForms.get(namespace);
-        this.form = new SettingsFormModel(this.scope, [enumField('policy',['auto','cross-check','deepseek-official']), enumField('doubaoEdition',['custom','global']), boolField],
+        this.form = new SettingsFormModel(this.scope, [enumField('policy',['auto','cross-check','perplexity-only','doubao-only','deepseek-official']), enumField('doubaoEdition',['custom','global']), boolField],
           ['perplexity','doubao'].map(key => ({field:key,write:async value=>{
             const ref=this.refs()[key]; const response=await ctx.remote.credentials.set(ref,value);
             if(!response.ok)return false;
@@ -62,13 +64,14 @@ window.__ModuleLoader__.load({
       const state=props.useVibeSearchCard(snapshot=>snapshot),t=props.t;
       if(props.view==='summary')return t('description');
       const disabled=!state.writable||state.saving;
+      const singleProvider=['perplexity-only','doubao-only'].includes(state.policy.text);
       const select=(id,label,value,items,field,hint)=>jsxs('div',{style:{display:'grid',gap:'8px',marginBottom:'20px'},children:[
         jsx('label',{htmlFor:id,children:label}),jsxs('select',{id,value,disabled,onChange:event=>props.edit(field,event.target.value),style:{font:'inherit',padding:'8px',color:'inherit',background:'transparent',border:'1px solid #888',borderRadius:'6px'},children:items.map(([value,label])=>jsx('option',{value,children:label},value))}),jsx('p',{children:hint})]});
       return jsxs(SettingsForm,{state,labels:{unavailable:t('unavailable'),readOnly:t('readOnly'),saveFailed:t('saveFailed'),save:t('save'),saving:t('saving')},onSave:props.save,onDiscard:props.discard,children:[
         jsx('h3',{children:t('title')}),jsx('p',{children:t('description')}),
-        select('vibe-search-policy',t('policy'),state.policy.text,[['auto',t('auto')],['cross-check',t('check')],['deepseek-official',t('official')]],'policy',t('policyHint')),
+        select('vibe-search-policy',t('policy'),state.policy.text,[['auto',t('auto')],['cross-check',t('check')],['perplexity-only',t('perplexityOnly')],['doubao-only',t('doubaoOnly')],['deepseek-official',t('official')]],'policy',t(singleProvider?'singleHint':'policyHint')),
         select('vibe-search-edition',t('edition'),state.edition.text,[['custom',t('custom')],['global',t('global')]],'doubaoEdition',t('editionHint')),
-        jsx('label',{style:{display:'flex',gap:'8px',marginBottom:'20px'},children:jsxs('span',{children:[jsx('input',{type:'checkbox',checked:state.fallback.text==='true',disabled,onChange:event=>props.edit('allowOfficialFallback',String(event.target.checked))}),t('fallback')]})}),
+        jsx('label',{style:{display:'flex',gap:'8px',marginBottom:'20px'},children:jsxs('span',{children:[jsx('input',{type:'checkbox',checked:!singleProvider&&state.fallback.text==='true',disabled:disabled||singleProvider,onChange:event=>props.edit('allowOfficialFallback',String(event.target.checked))}),t('fallback')]})}),
         ...['perplexity','doubao'].map(key=>jsx(SettingsSecretField,{id:'vibe-search-key-'+key,label:(key==='perplexity'?'Perplexity':'豆包 / Doubao')+' API Key',hint:t('secretHint'),disabled:state.saving||!state.credentials[key]?.writable,text:state[key].text,configured:state.credentials[key]?.configured??false,stateLabel:t(state.credentials[key]?.configured?'configured':'missing'),onEdit:text=>props.edit(key,text)},key)),
         jsx('p',{children:t('officialHint')}),jsx('button',{type:'button',disabled,onClick:()=>{for(const field of ['policy','doubaoEdition','allowOfficialFallback'])props.resetField(field);},children:t('reset')})]});
     }
