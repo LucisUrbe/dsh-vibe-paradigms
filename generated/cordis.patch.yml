@@ -17,7 +17,7 @@
       config:
         id: vibe-chat
         name: 聊天模式
-        description: 在聊天工作区进行对话、网页搜索、安全计算和显式长期记忆管理
+        description: 在聊天工作区进行对话、网页搜索、安全计算和显式长期记忆管理。
         order: 10
         plugins:
           - id: vibe-chat-web

@@ -11,7 +11,7 @@ const patch = [{ id: 'web', config: { searchProvider: 'vibe-paradigms-search', f
   { id: 'vibe-mode-policy', name: 'dsh-vibe-paradigms' },
   { id: 'vibe-chat-workspace', name: 'dsh-vibe-paradigms/workspace' },
   { id: 'vibe-preset-chat', name: '@deepseek-ai/dsh-agent-preset', config: {
-    id: 'vibe-chat', name: '聊天模式', description: '在聊天工作区进行对话、网页搜索、安全计算和显式长期记忆管理', order: 10,
+    id: 'vibe-chat', name: '聊天模式', description: '在聊天工作区进行对话、网页搜索、安全计算和显式长期记忆管理。', order: 10,
     plugins: [
       { id: 'vibe-chat-web', name: 'cordis:group', group: true, isolate: { web: true }, config: [
         { id: 'web', name: '@deepseek-ai/dsh-web', config: { searchProvider: 'vibe-paradigms-search', fetchProvider: 'http' } },

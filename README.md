@@ -1,56 +1,111 @@
 # dsh-vibe-paradigms
 
-Vibe coding paradigms for DeepSeek Harness。
+English | [中文](README.zh.md)
 
-## 开发与检查
+Vibe coding paradigms for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness), packaged as an external plugin bundle.
 
-需要 Node.js 24 或以上、pnpm 11，以及已安装 Desktop 随附的 `dsh`。
+The Chat preset provides web search across multiple indexes, official page fetching, bounded numerical calculations, and explicit long-term memory. Use the upstream Standard preset for coding tasks.
+
+Choose any model provider supported by your DeepSeek Harness setup. Search providers are configured independently of the conversation model. **OpenCode Go is optional**; it is one possible model provider, not a requirement for this bundle.
+
+## Requirements
+
+- Node.js 24 or later.
+- pnpm 11.
+- DeepSeek Harness Desktop and its bundled `dsh` command.
+
+## Installation
+
+From this repository checkout, install dependencies, build, and add the bundle using the official plugin mechanism:
 
 ```sh
 pnpm install --frozen-lockfile
+pnpm build
+dsh plugin --profile desktop add "link:$PWD" --ignore-scripts
+```
+
+Enable `dsh-vibe-paradigms` on the Desktop **Plugins** page and restart Desktop. Configure your preferred model provider through DeepSeek Harness, then create a session in the **Chat workspace** and select the **Chat preset**. The workspace and preset currently appear as **Chat** in the interface. The recommended permission is read-only (**Read Only**).
+
+This installation adds the bundle without installing a model provider or overriding your default model. Store provider credentials through the official credential service or the environment variables required by your chosen provider. Keep credential values out of the repository and profile patches.
+
+## Web search
+
+### Routing and results
+
+Chat uses a shared router for the Perplexity Search API and Doubao search:
+
+- Ordinary English queries prefer Perplexity.
+- Chinese queries and queries about China prefer Doubao.
+- Fact-checking and high-risk queries search both indexes in parallel.
+- Errors or empty results trigger an attempt with the other index, with degraded operation reported.
+
+The router normalizes results, removes tracking parameters, merges duplicate URLs, preserves dates and index provenance, and downranks excess results from the same host. Snippets are limited to 800 characters and final results to 20 entries; the official tool defaults to 8. Verify search snippets against the original sources.
+
+If you have access to only one provider or cannot reach the other, choose **Perplexity only** or **Doubao only** under **Search policy**. These policies request only the selected index: query language, verification intent, errors, and empty results never switch providers or enable DeepSeek official fallback. Only the selected provider's key is required. Doubao still uses the selected Custom or Global edition.
+
+### Settings and credentials
+
+Open **Plugins → dsh-vibe-paradigms → Search routing** to configure the automatic policy, forced cross-checking, single-provider policies, Doubao edition, official fallback, and the two search keys. Saved changes take effect immediately and are shared by Chat and Standard, including existing Chat sessions.
+
+Search keys are stored separately through the official credential service, not in configuration files. You can also supply `PERPLEXITY_API_KEY` and `DOUBAO_SEARCH_API_KEY` in the launch environment; credential references are resolved on every call. Doubao defaults to Custom. Global uses a different request and response protocol and must be selected explicitly in the routing settings.
+
+DeepSeek official search has the lowest priority and is off by default. It runs only when explicitly selected, or when official fallback is enabled and the other indexes produce no results. It reuses a signed-in DeepSeek account or `DEEPSEEK_API_KEY`.
+
+The official **Plugins → Web search** section remains available for the DeepSeek endpoint, key, and per-search budget. Explicit official searches through the router use these settings too. Enabling the official plugin does not make it the default search provider.
+
+### Upgrading an older configuration
+
+Remove the old Perplexity provider entry and dependency, set the root `web.searchProvider` to `vibe-paradigms-search`, keep `fetchProvider: http`, and restore `web-search-deepseek`. The generated bundle already configures the root router for new installations.
+
+After upgrading, create a session in the new Chat workspace. Existing sessions retain their original working directory; directories are not moved automatically. Before migrating memory, back it up and check whether the destination already contains data.
+
+## Workspace, memory, and calculations
+
+Chat uses an empty workspace at `$DSH_HOME/vibe-paradigms/chat-workspace/`. Explicit memory is stored separately at `$DSH_HOME/vibe-paradigms/memory/memory.md`.
+
+Memory is written only on explicit request. Read the current revision before updating it.
+
+The calculator accepts numeric strings and bounded operations. It supports decimal arithmetic, statistics, weighted calculations, vectors and matrices, and exact `BigInt` arithmetic. Repeating decimals use 256 significant digits with half-even rounding.
+
+## Optional: OpenCode Go
+
+If you choose [OpenCode Go](https://github.com/Duskriver/dsh-opencode-go) as your model provider, install its plugin separately:
+
+```sh
+dsh plugin --profile desktop add dsh-opencode-go@0.1.21 --ignore-scripts
+```
+
+Enable its bundle on the Desktop Plugins page and restart Desktop. Store its key as `OPENCODE_API_KEY` through the official credential service or provide it through that environment variable, then select an OpenCode Go model.
+
+[config/profile.patch.yml](config/profile.patch.yml) is an optional OpenCode Go default-model example. It overrides only `agent-default-model`, selecting `dsh-opencode-go/deepseek-v4.1-flash` with reasoning effort `high`. The main installation above does not apply this template. Use your chosen provider's identifiers if you adapt it for another provider.
+
+### Optional custom profile helper
+
+For a separate profile using the OpenCode Go example, run:
+
+```sh
+pnpm profile:create
+```
+
+This helper currently installs both this bundle and the OpenCode Go plugin and applies the default-model template above. Use it when you want that provider and model configuration.
+
+By default, it creates the ignored `docs/runtime/dsh/profiles/vibe-paradigms` directory, inheriting the shipped profile composition. It does not start a web service or copy credentials. Set `DSH_HOME` to choose an independent location. Repeated runs reuse the existing profile, preserve other configuration, and update the default-model entry.
+
+## Development and checks
+
+```sh
 pnpm test
 pnpm compat
 pnpm hmr
 pnpm audit:public
 ```
 
-`test`、`compat`、`hmr` 运行固定版本的公开 Host 服务，使用 Agent/权限夹具，不调用模型。`pnpm hmr` 验证源码重载、预设配置更新、旧 revision 保留和卸载清理。
+`test`, `compat`, and `hmr` run the pinned public host services with agent and permission fixtures, without calling a model. `pnpm hmr` verifies source reloading, preset configuration updates, retention of older revisions, and cleanup on unloading.
 
-## 安装
+Use `pnpm build` to generate `lib/` and the bundle patch during development. Restart Desktop after changing preset subplugin source code.
 
-先构建，再使用官方 bundle/profile 机制：
+Local knowledge, probes, and acceptance records live in the ignored `docs/` directory. Public documentation is maintained in English and Chinese, with English as the default README. The npm package contains only runtime code, generated bundle configuration, public READMEs, and the license.
 
-```sh
-pnpm build
-dsh plugin --profile desktop add "link:$PWD" dsh-opencode-go@0.1.21 --ignore-scripts
-```
+## License
 
-在 Desktop 的“插件”页启用两个 bundle，重启 Desktop；在 **聊天模式** 工作区新建会话，再选择 **聊天模式** 预设。它提供多索引 Web 搜索/官方抓取、受限数值计算和显式长期记忆，推荐权限为“仅可查看”。代码任务继续使用官方标准模式。
-
-密钥由官方 credentials 服务保存为 `OPENCODE_API_KEY`，或通过该环境变量提供；密钥值不进入仓库或 profile patch。模型默认值模板见 [config/profile.patch.yml](config/profile.patch.yml)，仅覆盖 `agent-default-model`。
-
-自定义 profile 可通过以下命令准备：
-
-```sh
-pnpm profile:create
-```
-
-默认创建仓库内已忽略的 `docs/runtime/dsh/profiles/vibe-paradigms`，继承 shipped profile 的组合并安装同一 bundle；不启动 Web 服务，不复制凭据。也可设置 `DSH_HOME` 指定独立位置。重复执行复用现有 profile；保留其他配置并更新上述默认模型。
-
-开发时用 `pnpm build` 生成 `lib/` 与 bundle patch。修改预设子插件源码后重启 Desktop。
-
-聊天模式通过统一路由调用 Perplexity 原始 Search API 和豆包搜索：普通英文查询优先 Perplexity，中文/中国本地查询优先豆包，事实核查及高风险查询并行查询两个索引。故障或空结果时尝试另一个索引，并报告降级状态。结果规范化、去除跟踪参数、合并重复 URL、保留日期与索引来源，并对同主机过量结果降权；摘要最多 800 字符，最终结果最多 20 条（官方工具默认 8 条）。搜索摘要需要结合原始来源核实。
-
-只开通一个提供方或另一方网络不可用时，可在“搜索策略”中选择“只使用 Perplexity”或“只使用豆包”。单索引策略只请求选定提供方，不因查询语言、核查意图、失败或空结果切换索引，也不启用 DeepSeek 官方兜底；只需配置选定提供方的 Key。豆包仍使用所选 Custom / Global 版本。
-
-密钥使用官方 credentials 服务或启动环境中的 `PERPLEXITY_API_KEY`、`DOUBAO_SEARCH_API_KEY`，每次调用重新解析。豆包默认 Custom 版；Global 版使用另一套请求和响应协议，在搜索路由设置中显式选择。搜索和对话模型独立。
-
-DeepSeek 官方搜索优先级最低，默认不主动调用；只有明确选择官方搜索，或启用官方兜底且其他索引无结果时才调用。此时复用已登录的 DeepSeek 账号或 `DEEPSEEK_API_KEY`。在 **插件 → dsh-vibe-paradigms → 搜索路由** 中设置自动策略、强制双索引、豆包版本、官方兜底及两个搜索 Key；保存后立即生效，聊天模式和标准模式共用，已有聊天模式会话也会读取当前设置。Key 使用独立 credentials 写入，不存入配置文件。
-
-保留官方 **插件 → 网页搜索** 栏目，用于设置 DeepSeek 的接口地址、Key 与单次搜索预算；这些设置也用于路由中的显式官方搜索。官方插件启用不代表它成为默认搜索。升级旧配置时，移除旧 Perplexity provider 条目和依赖，将根 `web.searchProvider` 设为 `vibe-paradigms-search`，保留 `fetchProvider: http`，恢复 `web-search-deepseek`。生成 bundle 已为新安装配置根路由。
-
-升级后在新 **聊天模式** 工作区创建会话；旧会话继续保留原 cwd，原目录不会自动移动。迁移记忆前先备份并检查目标是否已有内容。
-
-聊天模式的空工作区位于 `$DSH_HOME/vibe-paradigms/chat-workspace/`，显式记忆位于独立的 `$DSH_HOME/vibe-paradigms/memory/memory.md`。只有明确请求才写入记忆，更新前需读取 revision。计算器接受数值字符串与受限运算，支持十进制、统计、加权、向量/矩阵和 BigInt；循环小数采用 256 位有效数字、half-even 舍入。
-
-本地知识库、探测和验收记录统一保存在已忽略的 `docs/`；npm 包只包含运行代码、生成的 bundle 配置和公开使用说明。
+[MIT](LICENSE)

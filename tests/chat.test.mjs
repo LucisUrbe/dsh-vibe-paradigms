@@ -19,7 +19,7 @@ test('actual Chat preset isolates routed web selection, native tools, prompt, me
     assert.equal(workspaces[0].title, '聊天模式');
     for (const language of ['zh', 'en']) {
       assert.deepEqual(presetDisplayText(roster[0], key => `${language}:${key}`), {
-        name: '聊天模式', description: '在聊天工作区进行对话、网页搜索、安全计算和显式长期记忆管理',
+        name: '聊天模式', description: '在聊天工作区进行对话、网页搜索、安全计算和显式长期记忆管理。',
       });
     }
     const agent = { session: { id: 'chat-fixture', header: { cwd: ctx.vibeChatWorkspace.path } } };
