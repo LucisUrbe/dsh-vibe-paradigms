@@ -4,6 +4,8 @@
     searchProvider: vibe-paradigms-search
     fetchProvider: http
 - insert:
+    - id: vibe-compat
+      name: dsh-vibe-paradigms/compat
     - id: vibe-search-settings
       name: dsh-vibe-paradigms/search-settings
     - id: vibe-root-search

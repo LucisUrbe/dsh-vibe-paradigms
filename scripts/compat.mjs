@@ -1,10 +1,14 @@
 import { chatRuntime } from '../tests/fixtures/chat-runtime.mjs';
 import { createScope } from '@deepseek-ai/dsh-scope';
-import { probe, testedDshVersions } from '../lib/compat/probe.js';
+import { probe, supportedDshRange } from '../lib/compat/probe.js';
+import { missingExports } from '../lib/compat/index.js';
+import { readFile } from 'node:fs/promises';
 import { installToolPolicy } from '../lib/compat/tool-policy.js';
 import { modeForPreset } from '../lib/mode/spec.js';
 import assert from 'node:assert/strict';
 
+const dshVersion = JSON.parse(await readFile(new URL('../node_modules/@deepseek-ai/dsh-agent/package.json', import.meta.url), 'utf8')).version;
+assert.deepEqual(missingExports(), []);
 const { ctx, definition, dispose } = await chatRuntime();
 let scope;
 try {
@@ -21,5 +25,5 @@ try {
   assert.equal(result.isError, false); assert.equal(result.value.result, '0.3');
   await scope.dispose(); scope = undefined; await release();
   assert.deepEqual(await ctx.agentPresets.list(), []);
-  console.log(JSON.stringify({ passed: true, testedDshVersions, scope: 'isolated exact-version Chat composition; permission, workspace persistence and Agent fixtures', capabilities: probe(ctx), presetTools: tools, lifecycle: ['register', 'mount', 'execute', 'dispose'], modelCalled: false }, null, 2));
+  console.log(JSON.stringify({ passed: true, dshVersion, supportedDshRange, scope: 'isolated exact-version Chat composition; permission, workspace persistence and Agent fixtures', capabilities: probe(ctx), presetTools: tools, lifecycle: ['register', 'mount', 'execute', 'dispose'], modelCalled: false }, null, 2));
 } finally { await scope?.dispose(); await dispose(); }

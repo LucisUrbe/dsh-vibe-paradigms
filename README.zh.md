@@ -12,7 +12,7 @@
 
 - Node.js 24 或以上。
 - pnpm 11。
-- DeepSeek Harness 桌面应用及其随附的 `dsh` 命令。
+- DeepSeek Harness 桌面应用 0.2.0-rc.2 或之后的任一 0.x 版本，及其随附的 `dsh` 命令。
 
 ## 安装
 
@@ -27,6 +27,20 @@ dsh plugin --profile desktop add "link:$PWD" --ignore-scripts
 在桌面应用的 **插件** 页启用 `dsh-vibe-paradigms`，然后重启应用。通过 DeepSeek Harness 配置你选择的模型服务供应商，再在 **聊天模式** 工作区新建会话，并选择 **聊天模式** 预设。推荐权限为 **仅可查看**。
 
 上述安装步骤只添加本插件包，不安装模型供应商插件，也不覆盖默认模型。模型密钥通过官方凭据服务保存，或通过所选供应商要求的环境变量提供。密钥值不要写入仓库或配置补丁。
+
+## DSH 更新兼容性
+
+插件包声明 `engines.dsh: ">=0.2.0-rc.2 <1.0.0-0"`，桌面应用 `.app` 内置的运行时在所有 0.x 更新后都会继续加载它。1.0.0 及其预发布版本属于主版本更新，需要本插件包发布新版本；在此之前，Host 会将插件包标记为不兼容并不予加载。
+
+该范围内的更新仍可能改动本插件包使用的接口。启动时，`vibe-compat` 会检查插件包依赖的全部 Host 服务和导出。桌面客户端还会读取插件清单：本插件包的任一组件加载失败、长时间等待，或聊天模式预设无法创建会话时，应用会弹出全局提醒，列出受影响的组件和当前 DSH 版本；插件设置卡片顶部也会显示同样的摘要。此时兼容性修复将在本仓库发布，请关注 [issues](https://github.com/LucisUrbe/dsh-vibe-paradigms/issues)，期间可改用标准模式。修复发布后，更新本仓库并重启桌面应用：
+
+```sh
+git pull
+pnpm install --frozen-lockfile
+pnpm build
+```
+
+提醒跟随桌面应用的界面语言。没有语言支持，或本插件包没有对应语言的文案时，默认使用简体中文；Host 端的兼容性诊断同样使用简体中文。
 
 ## 网页搜索
 
@@ -99,6 +113,8 @@ pnpm compat
 pnpm hmr
 pnpm audit:public
 ```
+
+开发用宿主固定为当前桌面应用内置的 DSH 版本。如需检查其他版本，执行 `pnpm use-dsh <版本号或 dist-tag>`（例如 `pnpm use-dsh next`）；它只改写 `devDependencies` 和锁文件，除非有意调整固定版本，否则不要提交改动。CI 每天也会针对 `next` 和 `alpha` dist-tag 运行同样的检查，以便提前发现问题。
 
 `test`、`compat`、`hmr` 运行固定版本的公开宿主服务，使用智能体与权限测试夹具，不调用模型。`pnpm hmr` 验证源码热重载、预设配置更新、旧版本保留和卸载清理。
 

@@ -1,5 +1,9 @@
 name: Verify public bundle
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 2 * * *'
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -18,3 +22,24 @@ jobs:
       - run: pnpm hmr
       - run: pnpm audit:public
       - run: git diff --exit-code -- generated/cordis.patch.yml
+  # The bundle admits every DSH 0.x release, so check the releases about to
+  # ship. A failure here means a compatibility fix is due in this repository.
+  upcoming-dsh:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        dsh: [next, alpha]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm use-dsh ${{ matrix.dsh }}
+      - run: pnpm test
+      - run: pnpm compat
+      - run: pnpm hmr
