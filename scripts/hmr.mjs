@@ -98,7 +98,8 @@ try {
   await ctx.loader.remove(presetId); await ctx.loader.await();
   for (const scope of scopes) await scope.dispose(); scopes.length = 0;
   assert.deepEqual(await ctx.agentPresets.list(), []);
-  console.log(JSON.stringify({ passed: true, dshVersion: '0.2.0-rc.2', scope: 'exact-version public HMR/Loader/services; Agent and permission fixtures', sourcePolicyReload: true, configurationPresetReload: true, existingRevisionRetained: true, toolPolicyPreserved: true, manualPermissionsPreserved: true, unloadCompleted: true, modelCalled: false }, null, 2));
+  const dshVersion = JSON.parse(await readFile(new URL('../node_modules/@deepseek-ai/dsh-agent/package.json', import.meta.url), 'utf8')).version;
+  console.log(JSON.stringify({ passed: true, dshVersion, scope: 'exact-version public HMR/Loader/services; Agent and permission fixtures', sourcePolicyReload: true, configurationPresetReload: true, existingRevisionRetained: true, toolPolicyPreserved: true, manualPermissionsPreserved: true, unloadCompleted: true, modelCalled: false }, null, 2));
 } finally {
   clearTimeout(timeout); await watchDispose?.();
   for (const scope of scopes) await scope.dispose();

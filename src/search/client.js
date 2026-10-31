@@ -3,8 +3,12 @@ window.__ModuleLoader__.load({
   id: 'dsh-vibe-paradigms',
   factory: require => {
     const { jsx, jsxs } = require('react/jsx-runtime');
-    const { SettingsForm, SettingsFormModel, SettingsSecretField } = require('@deepseek-ai/dsh-client-ui-primitives');
+    // Optional: a renamed primitive must not take the compatibility notice down with the settings card.
+    const primitives = (() => { try { return require('@deepseek-ai/dsh-client-ui-primitives') ?? {}; } catch { return {}; } })();
+    const { SettingsForm, SettingsFormModel, SettingsSecretField, Modal, Button } = primitives;
     const namespace = 'vibe-search-settings', dictionary = 'vibe.searchSettings';
+    // Without i18n support, or for a key the active locale lacks, copy defaults to Simplified Chinese.
+    const translator = (t, copy) => key => { const text = typeof t === 'function' ? t(key) : undefined; return typeof text === 'string' && text !== '' && text !== key ? text : copy[key]; };
     const zh = {
       title: '搜索路由', description: 'Perplexity 与豆包搜索，供聊天模式和标准模式共用。DeepSeek 官方搜索默认不主动调用。',
       policy: '搜索策略', auto: '自动：英文优先 Perplexity，中文优先豆包', check: '交叉查询：同时使用两个索引', official: 'DeepSeek 官方搜索（费用较高）',
@@ -61,27 +65,133 @@ window.__ModuleLoader__.load({
       dispose(){this.closed=true;this.generation++;this.unsubscribe();this.form.dispose();}
     }
     function Card(props){
-      const state=props.useVibeSearchCard(snapshot=>snapshot),t=props.t;
+      const state=props.useVibeSearchCard(snapshot=>snapshot),compat=props.useVibeCompat(snapshot=>snapshot),t=translator(props.t,zh);
       if(props.view==='summary')return t('description');
+      const notice=compat.problems.length?jsx(CompatSummary,{state:compat,t:props.t}):null;
       const disabled=!state.writable||state.saving;
       const singleProvider=['perplexity-only','doubao-only'].includes(state.policy.text);
       const select=(id,label,value,items,field,hint)=>jsxs('div',{style:{display:'grid',gap:'8px',marginBottom:'20px'},children:[
         jsx('label',{htmlFor:id,children:label}),jsxs('select',{id,value,disabled,onChange:event=>props.edit(field,event.target.value),style:{font:'inherit',padding:'8px',color:'inherit',background:'transparent',border:'1px solid #888',borderRadius:'6px'},children:items.map(([value,label])=>jsx('option',{value,children:label},value))}),jsx('p',{children:hint})]});
       return jsxs(SettingsForm,{state,labels:{unavailable:t('unavailable'),readOnly:t('readOnly'),saveFailed:t('saveFailed'),save:t('save'),saving:t('saving')},onSave:props.save,onDiscard:props.discard,children:[
-        jsx('h3',{children:t('title')}),jsx('p',{children:t('description')}),
+        notice,jsx('h3',{children:t('title')}),jsx('p',{children:t('description')}),
         select('vibe-search-policy',t('policy'),state.policy.text,[['auto',t('auto')],['cross-check',t('check')],['perplexity-only',t('perplexityOnly')],['doubao-only',t('doubaoOnly')],['deepseek-official',t('official')]],'policy',t(singleProvider?'singleHint':'policyHint')),
         select('vibe-search-edition',t('edition'),state.edition.text,[['custom',t('custom')],['global',t('global')]],'doubaoEdition',t('editionHint')),
         jsx('label',{style:{display:'flex',gap:'8px',marginBottom:'20px'},children:jsxs('span',{children:[jsx('input',{type:'checkbox',checked:!singleProvider&&state.fallback.text==='true',disabled:disabled||singleProvider,onChange:event=>props.edit('allowOfficialFallback',String(event.target.checked))}),t('fallback')]})}),
         ...['perplexity','doubao'].map(key=>jsx(SettingsSecretField,{id:'vibe-search-key-'+key,label:(key==='perplexity'?'Perplexity':'豆包 / Doubao')+' API Key',hint:t('secretHint'),disabled:state.saving||!state.credentials[key]?.writable,text:state[key].text,configured:state.credentials[key]?.configured??false,stateLabel:t(state.credentials[key]?.configured?'configured':'missing'),onEdit:text=>props.edit(key,text)},key)),
         jsx('p',{children:t('officialHint')}),jsx('button',{type:'button',disabled,onClick:()=>{for(const field of ['policy','doubaoEdition','allowOfficialFallback'])props.resetField(field);},children:t('reset')})]});
     }
-    const inject=['slots','locale','remote','remote.credentials','configForms'];
-    function apply(ctx){
+    // Compatibility notice. A DSH update inside the supported range can still
+    // break a seam this bundle uses; the Host inventory shows that as a failed
+    // or stuck row, or a broken Chat preset. The notice depends only on slots,
+    // so it still renders when the services behind the settings card change.
+    const compatDictionary = 'vibe.compat', issuesUrl = 'https://github.com/LucisUrbe/dsh-vibe-paradigms/issues';
+    const OWN_MODULE = /^dsh-vibe-paradigms(?:\/|$)/, OWN_PRESET = 'vibe-chat', GRACE_MS = 45000;
+    const compatZh = {
+      title: 'dsh-vibe-paradigms 暂不兼容当前 DeepSeek Harness', description: 'DeepSeek Harness 更新后，本插件的部分组件未能正常运行。聊天模式与搜索路由可能不可用，可暂时改用标准模式。',
+      fix: '兼容性修复将在 dsh-vibe-paradigms 仓库发布。请关注更新，拉取并重新构建后重启应用。', version: '当前 DSH 版本：', components: '受影响的组件：', issues: '查看或报告问题', dismiss: '知道了',
+      'component.vibe-compat': '兼容性自检', 'component.vibe-mode-policy': '模式权限策略', 'component.vibe-chat-workspace': '聊天工作区', 'component.vibe-search-settings': '搜索路由设置', 'component.vibe-root-search': '搜索路由',
+      'component.vibe-preset-chat': '聊天模式预设', 'component.vibe-chat': '聊天模式工具', 'component.vibe-paradigms-search': '聊天模式搜索路由', 'component.client-settings': '搜索路由设置页面',
+      'phase.failed': '加载失败', 'phase.pending': '等待所需服务', 'phase.loading': '加载未完成', 'phase.broken': '无法创建会话',
+    };
+    const compatEn = {
+      title: 'dsh-vibe-paradigms is not yet compatible with this DeepSeek Harness', description: 'After the DeepSeek Harness update, some components of this plugin are not working. Chat and search routing may be unavailable; use the Standard preset in the meantime.',
+      fix: 'A compatibility fix will be published in the dsh-vibe-paradigms repository. Watch for the update, then pull, rebuild and restart the app.', version: 'Current DSH version: ', components: 'Affected components:', issues: 'View or report issues', dismiss: 'Got it',
+      'component.vibe-compat': 'Compatibility self-check', 'component.vibe-mode-policy': 'Mode permission policy', 'component.vibe-chat-workspace': 'Chat workspace', 'component.vibe-search-settings': 'Search routing settings', 'component.vibe-root-search': 'Search routing',
+      'component.vibe-preset-chat': 'Chat preset', 'component.vibe-chat': 'Chat tools', 'component.vibe-paradigms-search': 'Chat search routing', 'component.client-settings': 'Search routing settings page',
+      'phase.failed': 'failed to load', 'phase.pending': 'waiting for required services', 'phase.loading': 'did not finish loading', 'phase.broken': 'cannot create sessions',
+    };
+    function compatProblems(snapshot, settled){
+      const problems=[];
+      for(const entry of snapshot?.entries??[]){
+        if(entry.enabled===false||!OWN_MODULE.test(entry.moduleName??''))continue;
+        if(entry.fiberPhase==='failed'||settled&&(entry.fiberPhase==='pending'||entry.fiberPhase==='loading'))problems.push({component:entry.entryId,phase:entry.fiberPhase});
+      }
+      for(const preset of snapshot?.agentPresets??[]){
+        if(preset.id!==OWN_PRESET)continue;
+        if(typeof preset.broken==='string')problems.push({component:'vibe-preset-chat',phase:'broken',detail:preset.broken});
+        for(const row of preset.rows??[])if(row.enabled!==false&&OWN_MODULE.test(row.moduleName??'')&&row.fiberPhase==='failed')problems.push({component:row.id??row.moduleName,phase:'failed'});
+      }
+      return problems;
+    }
+    class CompatStore {
+      constructor(){
+        this.listeners=new Set(); this.host=[]; this.client=[]; this.dismissed=''; this.version=undefined;
+        this.state={problems:[],signature:'',version:undefined,dismissed:''};
+        this.hooks={compat:{getSnapshot:()=>this.state,subscribe:listener=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener);};}}};
+      }
+      publish(){
+        const problems=[...this.client,...this.host],signature=JSON.stringify(problems.map(({component,phase})=>[component,phase]));
+        if(signature===this.state.signature&&this.version===this.state.version&&this.dismissed===this.state.dismissed)return;
+        this.state={problems,signature,version:this.version,dismissed:this.dismissed};
+        for(const listener of this.listeners)listener();
+      }
+      setHost(problems,version){this.host=problems;this.version=version;this.publish();}
+      report(component,phase){if(!this.client.some(item=>item.component===component)){this.client=[...this.client,{component,phase}];this.publish();}}
+      // Dismissal lasts for this page and this set of problems; a new problem or a restart shows it again.
+      dismiss(){this.dismissed=this.state.signature;this.publish();}
+    }
+    // The inventory is a point-in-time read without subscriptions: poll often
+    // while the Host starts, then slowly to catch presets mounted later.
+    class CompatMonitor {
+      constructor(ctx,store,list){this.ctx=ctx;this.store=store;this.list=list;this.started=Date.now();this.closed=false;this.timer=undefined;this.run();}
+      async check(){
+        let snapshot;
+        try{const response=await this.list();snapshot=response&&typeof response==='object'&&'ok' in response?(response.ok?response.value:undefined):response;}catch{return;}
+        if(this.closed||!snapshot)return;
+        const release=this.ctx.get('modules')?.manifest?.release?.version;
+        this.store.setHost(compatProblems(snapshot,Date.now()-this.started>=GRACE_MS),typeof release==='string'?release:undefined);
+      }
+      run(){
+        if(this.closed)return;
+        void this.check().finally(()=>{if(!this.closed)this.timer=setTimeout(()=>this.run(),Date.now()-this.started<120000?10000:60000);});
+      }
+      dispose(){this.closed=true;clearTimeout(this.timer);}
+    }
+    function CompatDetails({state,t}){
+      const label=component=>t('component.'+component)??component;
+      return jsxs('div',{style:{display:'grid',gap:'8px'},children:[
+        jsx('p',{style:{margin:0},children:t('fix')}),
+        state.version?jsx('p',{style:{margin:0},children:t('version')+state.version}):null,
+        jsx('p',{style:{margin:0},children:t('components')}),
+        jsx('ul',{style:{margin:0,paddingLeft:'20px'},children:state.problems.map((problem,index)=>jsx('li',{children:label(problem.component)+' — '+(t('phase.'+problem.phase)??problem.phase)+(problem.detail?': '+problem.detail:'')},index))}),
+        jsx('a',{href:issuesUrl,target:'_blank',rel:'noreferrer',children:t('issues')}),
+      ]});
+    }
+    function CompatSummary(props){
+      const t=translator(props.t,compatZh);
+      return jsxs('div',{role:'alert',style:{display:'grid',gap:'8px',marginBottom:'20px',padding:'12px',border:'1px solid #d9822b',borderRadius:'6px'},children:[jsx('strong',{children:t('title')}),jsx(CompatDetails,{state:props.state,t})]});
+    }
+    function CompatNotice(props){
+      const state=props.useCompat(snapshot=>snapshot);
+      if(!state.problems.length||state.signature===state.dismissed)return null;
+      const t=translator(props.t,compatZh),details=jsx(CompatDetails,{state,t});
+      if(Modal&&Button)return jsx(Modal,{open:true,title:t('title'),description:t('description'),closeLabel:t('dismiss'),onClose:props.dismiss,
+        footer:jsx(Button,{variant:'primary','data-modal-autofocus':true,onClick:props.dismiss,children:t('dismiss')}),children:details});
+      return jsxs('div',{role:'alertdialog','aria-label':t('title'),style:{position:'fixed',right:'24px',bottom:'24px',zIndex:2147483000,pointerEvents:'auto',display:'grid',gap:'8px',maxWidth:'420px',padding:'16px',
+        borderRadius:'8px',border:'1px solid #d9822b',background:'Canvas',color:'CanvasText',boxShadow:'0 4px 16px rgba(0,0,0,0.2)'},children:[
+        jsx('strong',{children:t('title')}),jsx('p',{style:{margin:0},children:t('description')}),details,jsx('button',{type:'button',onClick:props.dismiss,children:t('dismiss')})]});
+    }
+    function applySettingsCard(ctx,compat){
+      if(!SettingsForm||!SettingsFormModel||!SettingsSecretField)return compat.report('client-settings','failed');
       ctx.effect(()=>ctx.locale.register(dictionary,{zh,en}),'vibe-search: locale');
-      const controller=new CardController(ctx);
+      let controller;
+      try{controller=new CardController(ctx);}catch(error){compat.report('client-settings','failed');throw error;}
       ctx.effect(()=>()=>controller.dispose(),'vibe-search: form');
       ctx.effect(()=>ctx.remote.$on('credentials/reference-updated',ref=>{if(Object.values(controller.refs()).includes(ref))void controller.refresh();}),'vibe-search: credentials');
-      ctx.effect(()=>ctx.configForms.whileServed([namespace],()=>ctx.slots.inject('plugins.bundle.config',()=>ctx.slots.register({name:'plugins.bundle.config',key:'dsh-vibe-paradigms',locale:dictionary,inject:()=>controller.inject()},Card))),'vibe-search: settings card');
+      const injected=()=>{const value=controller.inject();return {...value,hooks:{...value.hooks,vibeCompat:compat.hooks.compat}};};
+      ctx.effect(()=>ctx.configForms.whileServed([namespace],()=>ctx.slots.inject('plugins.bundle.config',()=>ctx.slots.register({name:'plugins.bundle.config',key:'dsh-vibe-paradigms',locale:dictionary,inject:injected},Card))),'vibe-search: settings card');
+    }
+    const inject=['slots'];
+    function apply(ctx){
+      const compat=new CompatStore();
+      ctx.inject(['locale'],ctx=>{ctx.effect(()=>ctx.locale.register(compatDictionary,{zh:compatZh,en:compatEn}),'vibe-compat: locale');});
+      ctx.slots.inject('shell.overlay',()=>ctx.slots.register({name:'shell.overlay',id:'vibe-paradigms.compat',locale:compatDictionary,inject:()=>({hooks:compat.hooks,dismiss:()=>compat.dismiss()})},CompatNotice));
+      ctx.inject(['remote','remote.pluginInventory'],ctx=>{
+        const monitor=new CompatMonitor(ctx,compat,()=>ctx.remote.pluginInventory.list());
+        ctx.effect(()=>()=>monitor.dispose(),'vibe-compat: monitor');
+        ctx.on('connection/reset',()=>{void monitor.check();});
+      });
+      ctx.inject(['locale','remote','remote.credentials','configForms'],ctx=>applySettingsCard(ctx,compat));
     }
     return {inject,apply};
   }

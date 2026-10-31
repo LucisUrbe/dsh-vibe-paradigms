@@ -6,6 +6,7 @@ if (modes.filter(mode => mode.available && mode.preset !== 'standard').map(mode 
   throw new Error('Only the implemented Chat preset may be published.');
 }
 const patch = [{ id: 'web', config: { searchProvider: 'vibe-paradigms-search', fetchProvider: 'http' } }, { insert: [
+  { id: 'vibe-compat', name: 'dsh-vibe-paradigms/compat' },
   { id: 'vibe-search-settings', name: 'dsh-vibe-paradigms/search-settings' },
   { id: 'vibe-root-search', name: 'dsh-vibe-paradigms/search' },
   { id: 'vibe-mode-policy', name: 'dsh-vibe-paradigms' },

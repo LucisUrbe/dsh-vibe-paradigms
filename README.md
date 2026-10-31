@@ -12,7 +12,7 @@ Choose any model provider supported by your DeepSeek Harness setup. Search provi
 
 - Node.js 24 or later.
 - pnpm 11.
-- DeepSeek Harness Desktop and its bundled `dsh` command.
+- DeepSeek Harness Desktop 0.2.0-rc.2 or any later 0.x release, and its bundled `dsh` command.
 
 ## Installation
 
@@ -27,6 +27,20 @@ dsh plugin --profile desktop add "link:$PWD" --ignore-scripts
 Enable `dsh-vibe-paradigms` on the Desktop **Plugins** page and restart Desktop. Configure your preferred model provider through DeepSeek Harness, then create a session in the **Chat workspace** and select the **Chat preset**. The workspace and preset currently appear as **Chat** in the interface. The recommended permission is read-only (**Read Only**).
 
 This installation adds the bundle without installing a model provider or overriding your default model. Store provider credentials through the official credential service or the environment variables required by your chosen provider. Keep credential values out of the repository and profile patches.
+
+## Compatibility with DSH updates
+
+The bundle declares `engines.dsh: ">=0.2.0-rc.2 <1.0.0-0"`, so the runtime bundled inside the Desktop `.app` keeps loading it across every 0.x update. A 1.0.0 release, including its prereleases, is a major update and needs a new release of this bundle; until then the Host reports the bundle as incompatible and does not load it.
+
+An update inside that range can still change an interface this bundle uses. At startup, the `vibe-compat` row checks every Host service and export the bundle relies on. The Desktop client also reads the plugin inventory: when a row of this bundle fails, stays pending, or the Chat preset cannot compose sessions, an app-wide notice names the affected components and the DSH version. The same summary appears at the top of the bundle's settings card. A fix is then expected in this repository; watch [issues](https://github.com/LucisUrbe/dsh-vibe-paradigms/issues), and use the Standard preset in the meantime. After a fix, update the checkout and restart Desktop:
+
+```sh
+git pull
+pnpm install --frozen-lockfile
+pnpm build
+```
+
+The notice follows the Desktop language. Without locale support, or for a language this bundle has no copy for, it uses Simplified Chinese, as do Host-side compatibility diagnostics.
 
 ## Web search
 
@@ -99,6 +113,8 @@ pnpm compat
 pnpm hmr
 pnpm audit:public
 ```
+
+The development Host is pinned to the DSH release the current Desktop bundles. To check another release, run `pnpm use-dsh <version or dist-tag>` (for example `pnpm use-dsh next`); it rewrites only `devDependencies` and the lockfile, so do not commit the result unless you are moving the pin. CI runs the same checks daily against the `next` and `alpha` dist-tags as an early warning.
 
 `test`, `compat`, and `hmr` run the pinned public host services with agent and permission fixtures, without calling a model. `pnpm hmr` verifies source reloading, preset configuration updates, retention of older revisions, and cleanup on unloading.
 
